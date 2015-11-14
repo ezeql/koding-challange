@@ -14,8 +14,8 @@ var (
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
-	MongoDBHost    = flag.String("mongodb-host", "localhost", "MongoDB host")
-	MongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
+	mongoDBHost    = flag.String("mongodb-host", "localhost", "MongoDB host")
+	mongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		log.Fatalln("Error on RabbitMQ:", err)
 	}
 
-	session, err := mgo.Dial(fmt.Sprintf("%s:%v", *MongoDBHost, *MongoDBPort))
+	session, err := mgo.Dial(fmt.Sprintf("%s:%v", *mongoDBHost, *mongoDBPort))
 	if err != nil {
 		log.Fatalln("error dialing MongoDB", err)
 	}
