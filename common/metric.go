@@ -6,20 +6,22 @@ import (
 )
 
 //MetricData
-type MetricData struct {
+type MetricEntry struct {
 	Username string
 	Count    int64
 	Metric   string
 	Time     *time.Time
 }
 
-//FromJSONBytes builds a MetricData from JSON buffer
-func FromJSONBytes(b []byte) (MetricData, error) {
-	m := MetricData{}
-	e := json.Unmarshal(b, &m)
+//MustUnmarshallFromJSON builds a MetricData from JSON buffer
+func MustUnmarshallFromJSON(b []byte) MetricEntry {
+	m := MetricEntry{}
+	if e := json.Unmarshal(b, &m); e != nil {
+		panic(e)
+	}
 	if m.Time == nil {
 		t := time.Now().UTC()
 		m.Time = &t
 	}
-	return m, e
+	return m
 }
