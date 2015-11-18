@@ -31,17 +31,15 @@ func main() {
 	}
 	defer connector.Close()
 
-	session, err := OpenMongo(*mongoDBHost, *mongoDBPort)
+	mongo, err := OpenMongo(*mongoDBHost, *mongoDBPort)
 	if err != nil {
 		log.Fatalln("Error on Mongo:", err)
 	}
-	defer session.Close()
-
-	c := session.DB("koding").C("entries")
+	defer mongo.Close()
 
 	err = connector.Handle("hourly-log", func(b []byte) {
 		d := common.MustUnmarshallFromJSON(b)
-		if err = InsertMetric(d); err != nil {
+		if err = mongo.InsertMetric(d); err != nil {
 			log.Println("error inserting in mongo", err)
 		}
 	})
@@ -62,7 +60,7 @@ func OpenMongo(host string, port int) (*Mongo, error) {
 	return m, nil
 }
 
-func (m *Mongo) InsertMetric(d common.MetricData) error {
+func (m *Mongo) InsertMetric(d common.MetricEntry) error {
 	c := m.DB("koding").C("entries")
 	if err := c.Insert(d); err != nil {
 		return err
