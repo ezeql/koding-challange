@@ -17,7 +17,7 @@ var (
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
 	redisHost      = flag.String("redis-host", "127.0.0.1", "redis host")
 	redisPort      = flag.Int("redis-port", 6379, "redis port")
-	debugLevel     = flag.Bool("loglevel", false, "debug level (currently bool)")
+	debugMode      = flag.Bool("loglevel", false, "debug mode")
 )
 
 const (
@@ -37,7 +37,7 @@ type Redis struct {
 
 func main() {
 	flag.Parse()
-	common.DebugLevel = *debugLevel
+	common.DebugLevel = *debugMode
 
 	r, err := OpenRedis(*redisHost, *redisPort)
 	if err != nil {

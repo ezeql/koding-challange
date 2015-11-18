@@ -16,7 +16,7 @@ var (
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
 	mongoDBHost    = flag.String("mongodb-host", "192.168.99.100", "MongoDB host")
 	mongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
-	debugLevel     = flag.Bool("loglevel", false, "debug level (currently bool)")
+	debugMode      = flag.Bool("loglevel", false, "debug mode")
 )
 
 type Mongo struct {
@@ -25,7 +25,7 @@ type Mongo struct {
 
 func main() {
 	flag.Parse()
-	common.DebugLevel = *debugLevel
+	common.DebugLevel = true
 
 	mongo, err := OpenMongo(*mongoDBHost, *mongoDBPort)
 	if err != nil {

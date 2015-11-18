@@ -20,7 +20,7 @@ var (
 	postgreSQLUser     = flag.String("postgresql-user", "postgres", "PostgreSQL username")
 	postgreSQLPassword = flag.String("postgresql-password", "", "PostgreSQL password")
 	postgreSQLDB       = flag.String("postgresql-db", "", "PostgreSQL DB name")
-	debugLevel         = flag.Bool("loglevel", false, "debug level (currently bool)")
+	debugMode          = flag.Bool("loglevel", false, "debug mode")
 )
 
 type DB struct {
@@ -29,7 +29,7 @@ type DB struct {
 
 func main() {
 	flag.Parse()
-	common.DebugLevel = *debugLevel
+	common.DebugLevel = *debugMode
 
 	db, err := openDB(*postgreSQLHost, *postgreSQLPort, *postgreSQLUser, *postgreSQLPassword, *postgreSQLDB)
 	if err != nil {

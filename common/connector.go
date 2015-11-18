@@ -56,7 +56,7 @@ func (m *RabbitMQConnector) open() error {
 	go func() {
 		Info("rabbitmq connection closed: ", <-m.conn.NotifyClose(make(chan *amqp.Error)))
 		ticker := time.NewTicker(time.Second * 5)
-		for t := range ticker.C {
+		for range ticker.C {
 			Log("trying to recover connection to rabbitmq")
 			if e := m.open(); e != nil {
 				Log("cannot connect to RabbitMQ at:", m.url)
