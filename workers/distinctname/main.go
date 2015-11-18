@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ezeql/koding-test/common"
+	"github.com/ezeql/koding-challange/common"
 	"github.com/garyburd/redigo/redis"
 	"log"
 	"strconv"

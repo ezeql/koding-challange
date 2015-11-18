@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"github.com/ezeql/koding-test/common"
+	"github.com/ezeql/koding-challange/common"
 	_ "github.com/lib/pq"
 	"log"
 	"time"
