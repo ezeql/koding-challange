@@ -34,7 +34,7 @@ func BuildRabbitMQConnector(host string, port int, user string, password string)
 	return mq, nil
 }
 
-func (m *RabbitMQConnector) Handle(tag string, f func([]byte)) error {
+func (m *RabbitMQConnector) Handle(tag string, f func([]byte) bool) error {
 
 	q, err := m.channel.QueueDeclare(tag, true, false, false, false, nil)
 	if err != nil {
@@ -59,10 +59,13 @@ func (m *RabbitMQConnector) Handle(tag string, f func([]byte)) error {
 	return nil
 }
 
-func handle(deliveries <-chan amqp.Delivery, f func([]byte), done chan error) {
+func handle(deliveries <-chan amqp.Delivery, f func([]byte) bool, done chan error) {
 	for d := range deliveries {
-		d.Ack(false)
-		f(d.Body)
+		requeue := !f(d.Body)
+		if requeue {
+			Log("error processing an element: requeueing")
+		}
+		d.Ack(requeue)
 	}
 	Info("handle: deliveries channel closed")
 	done <- nil

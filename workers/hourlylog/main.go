@@ -10,12 +10,13 @@ import (
 )
 
 var (
-	rabbitHost     = flag.String("rabbit-host", "127.0.0.1", "RabbitMQ host")
+	rabbitHost     = flag.String("rabbit-host", "192.168.99.100", "RabbitMQ host")
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
-	mongoDBHost    = flag.String("mongodb-host", "127.0.0.1", "MongoDB host")
+	mongoDBHost    = flag.String("mongodb-host", "192.168.99.100", "MongoDB host")
 	mongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
+	debugLevel     = flag.Bool("loglevel", false, "debug level (currently bool)")
 )
 
 type Mongo struct {
@@ -24,12 +25,7 @@ type Mongo struct {
 
 func main() {
 	flag.Parse()
-
-	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword)
-	if err != nil {
-		log.Fatalln("Error on RabbitMQ:", err)
-	}
-	defer connector.Close()
+	common.DebugLevel = *debugLevel
 
 	mongo, err := OpenMongo(*mongoDBHost, *mongoDBPort)
 	if err != nil {
@@ -37,11 +33,19 @@ func main() {
 	}
 	defer mongo.Close()
 
-	err = connector.Handle("hourly-log", func(b []byte) {
+	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword)
+	if err != nil {
+		log.Fatalln("cannot connect to rabbitmq", err)
+	}
+	defer connector.Close()
+
+	err = connector.Handle("hourly-log", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
 		if err = mongo.InsertMetric(d); err != nil {
 			log.Println("error inserting in mongo", err)
+			return false
 		}
+		return true
 	})
 
 	if err != nil {

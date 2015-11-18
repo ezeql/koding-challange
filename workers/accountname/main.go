@@ -29,6 +29,7 @@ type DB struct {
 
 func main() {
 	flag.Parse()
+	common.DebugLevel = *debugLevel
 
 	db, err := openDB(*postgreSQLHost, *postgreSQLPort, *postgreSQLUser, *postgreSQLPassword, *postgreSQLDB)
 	if err != nil {
@@ -46,11 +47,13 @@ func main() {
 	}
 	defer c.Close()
 
-	err = c.Handle("account-name", func(b []byte) {
+	err = c.Handle("account-name", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
 		if err := db.insertEntry(d.Username, *d.Time); err != nil {
-
+			log.Println("error inserting in pgsql", err)
+			return false
 		}
+		return true
 	})
 	if err != nil {
 		log.Fatalln("error connecting to Rabbit")

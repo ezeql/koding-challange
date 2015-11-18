@@ -37,6 +37,7 @@ type Redis struct {
 
 func main() {
 	flag.Parse()
+	common.DebugLevel = *debugLevel
 
 	r, err := OpenRedis(*redisHost, *redisPort)
 	if err != nil {
@@ -50,11 +51,13 @@ func main() {
 	}
 	defer connector.Close()
 
-	connector.Handle("distinct-name", func(b []byte) {
+	connector.Handle("distinct-name", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
 		if _, err = r.processMetric(d); err != nil {
-			panic(err)
+			log.Println("error inserting in redis", err)
+			return false
 		}
+		return true
 	})
 
 	for range time.Tick(time.Minute) {
