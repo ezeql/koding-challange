@@ -1,37 +1,75 @@
 package common
 
 import (
+	"expvar"
 	"fmt"
+	"github.com/paulbellamy/ratecounter"
 	"github.com/streadway/amqp"
+	"time"
+)
+
+var (
+	counts        = expvar.NewMap("rabbitmq_counters")
+	hitspersecond = expvar.NewInt("hits_per_second")
+	counter       = ratecounter.NewRateCounter(1 * time.Second)
 )
 
 type RabbitMQConnector struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-	tag     string
-	done    chan error
+	conn     *amqp.Connection
+	channel  *amqp.Channel
+	tag      string
+	url      string
+	done     chan error
+	internal chan bool
+	handler  func([]byte) bool
 }
 
 func BuildRabbitMQConnector(host string, port int, user string, password string) (*RabbitMQConnector, error) {
 	var err error
 	mq := &RabbitMQConnector{}
-	Info("connecting to RabbitMQ")
 
-	url := fmt.Sprintf("amqp://%s:%s@%s:%v", user, password, host, port)
+	mq.url = fmt.Sprintf("amqp://%s:%s@%s:%v", user, password, host, port)
 
-	if mq.conn, err = amqp.Dial(url); err != nil {
+	if err = mq.open(); err != nil {
 		return nil, err
 	}
-	if mq.channel, err = mq.conn.Channel(); err != nil {
-		return nil, err
+	return mq, err
+}
+
+func (m *RabbitMQConnector) open() error {
+	Log("connecting to RabbitMQ")
+
+	var err error
+	if m.conn, err = amqp.Dial(m.url); err != nil {
+		return err
 	}
-	if err = mq.channel.ExchangeDeclare("logs", "fanout", true, false, false, false, nil); err != nil {
-		return nil, err
+	if m.channel, err = m.conn.Channel(); err != nil {
+		return err
 	}
-	if err = mq.channel.Qos(1, 0, false); err != nil {
-		return nil, err
+	if err = m.channel.ExchangeDeclare("logs", "fanout", true, false, false, false, nil); err != nil {
+		return err
 	}
-	return mq, nil
+	if err = m.channel.Qos(1, 0, false); err != nil {
+		return err
+	}
+
+	go func() {
+		Info("rabbitmq connection closed: ", <-m.conn.NotifyClose(make(chan *amqp.Error)))
+		ticker := time.NewTicker(time.Second * 5)
+		for t := range ticker.C {
+			Log("trying to recover connection to rabbitmq")
+			if e := m.open(); e != nil {
+				Log("cannot connect to RabbitMQ at:", m.url)
+				continue
+			}
+			if e := m.Handle(m.tag, m.handler); e != nil {
+				continue
+			}
+			ticker.Stop()
+		}
+	}()
+
+	return nil
 }
 
 func (m *RabbitMQConnector) Handle(tag string, f func([]byte) bool) error {
@@ -49,11 +87,9 @@ func (m *RabbitMQConnector) Handle(tag string, f func([]byte) bool) error {
 	if err != nil {
 		return err
 	}
-	go func() {
-		Info("closing: %s", <-m.conn.NotifyClose(make(chan *amqp.Error)))
-		//TODO: try to recconect
-	}()
+
 	m.tag = tag
+	m.handler = f
 
 	go handle(msgs, f, m.done)
 	return nil
@@ -61,9 +97,12 @@ func (m *RabbitMQConnector) Handle(tag string, f func([]byte) bool) error {
 
 func handle(deliveries <-chan amqp.Delivery, f func([]byte) bool, done chan error) {
 	for d := range deliveries {
+		counter.Incr(1)
+		hitspersecond.Set(counter.Rate())
 		requeue := !f(d.Body)
 		if requeue {
 			Log("error processing an element: requeueing")
+			counts.Add("worker_errors", 1)
 		}
 		d.Ack(requeue)
 	}
