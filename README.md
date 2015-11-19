@@ -28,4 +28,4 @@ Metrics:
 
 https://github.com/divan/expvarmon
 
-expvarmon -ports="33333,44444,55555" -vars="mem:memstats.Alloc,duration:Response.Mean,hitsPerSecond"
+ expvarmon -ports="33333,44444,55555" -vars="counts.totalProccesed,counts.workerErrors,hitsPerSecond" -i=5s
