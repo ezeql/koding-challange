@@ -26,6 +26,12 @@ type Mongo struct {
 	*mgo.Session
 }
 
+var index = mgo.Index{
+	Key:         []string{"time"},
+	Name:        "time_ttl",
+	ExpireAfter: time.Hour,
+}
+
 func main() {
 	flag.Parse()
 	common.DebugLevel = true
@@ -70,15 +76,8 @@ func OpenMongo(host string, port int) (*Mongo, error) {
 
 func (m *Mongo) InsertMetric(d common.MetricEntry) error {
 	c := m.DB("koding").C("entries")
-	if err := c.Insert(d); err != nil {
+	if err := c.EnsureIndex(index); err != nil {
 		return err
 	}
-	index := mgo.Index{
-		Key:         []string{"time"},
-		Name:        "time_ttl",
-		ExpireAfter: time.Hour,
-	}
-	//delete if exists..
-	c.DropIndex(index.Name)
-	return c.EnsureIndex(index)
+	return c.Insert(d)
 }
