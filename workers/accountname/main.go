@@ -61,7 +61,8 @@ func main() {
 		log.Fatalln("error connecting to Rabbit", err)
 	}
 
-	http.ListenAndServe(":8000", nil)
+	bindTo := fmt.Sprintf(":%v", *metricsPort)
+	http.ListenAndServe(bindTo, nil)
 }
 
 func openDB(host string, port int, user string, password string, dbName string) (*DB, error) {
