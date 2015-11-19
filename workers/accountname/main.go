@@ -7,6 +7,7 @@ import (
 	"github.com/ezeql/koding-challange/common"
 	_ "github.com/lib/pq"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -21,6 +22,7 @@ var (
 	postgreSQLPassword = flag.String("postgresql-password", "", "PostgreSQL password")
 	postgreSQLDB       = flag.String("postgresql-db", "", "PostgreSQL DB name")
 	debugMode          = flag.Bool("loglevel", false, "debug mode")
+	metricsPort        = flag.Int("metrics-port", 33333, "expvar stats port")
 )
 
 type DB struct {
@@ -56,10 +58,10 @@ func main() {
 		return true
 	})
 	if err != nil {
-		log.Fatalln("error connecting to Rabbit")
+		log.Fatalln("error connecting to Rabbit", err)
 	}
 
-	select {}
+	http.ListenAndServe(":8000", nil)
 }
 
 func openDB(host string, port int, user string, password string, dbName string) (*DB, error) {

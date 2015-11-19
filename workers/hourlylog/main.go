@@ -6,6 +6,7 @@ import (
 	"github.com/ezeql/koding-challange/common"
 	"gopkg.in/mgo.v2"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -17,6 +18,7 @@ var (
 	mongoDBHost    = flag.String("mongodb-host", "192.168.99.100", "MongoDB host")
 	mongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
 	debugMode      = flag.Bool("loglevel", false, "debug mode")
+	metricsPort    = flag.Int("metrics-port", 55555, "expvar stats port")
 )
 
 type Mongo struct {
@@ -49,10 +51,11 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatalln("error connecting to Rabbit")
+		log.Fatalln("error connecting to Rabbit", err)
 	}
 
-	select {}
+	bindTo := fmt.Sprintf(":%v", *metricsPort)
+	http.ListenAndServe(bindTo, nil)
 }
 
 func OpenMongo(host string, port int) (*Mongo, error) {

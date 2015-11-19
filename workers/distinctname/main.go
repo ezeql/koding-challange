@@ -6,6 +6,7 @@ import (
 	"github.com/ezeql/koding-challange/common"
 	"github.com/garyburd/redigo/redis"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -18,6 +19,7 @@ var (
 	redisHost      = flag.String("redis-host", "127.0.0.1", "redis host")
 	redisPort      = flag.Int("redis-port", 6379, "redis port")
 	debugMode      = flag.Bool("loglevel", false, "debug mode")
+	metricsPort    = flag.Int("metrics-port", 44444, "expvar stats port")
 )
 
 const (
@@ -59,6 +61,13 @@ func main() {
 		}
 		return true
 	})
+
+	if err != nil {
+		log.Fatalln("error connecting to Rabbit", err)
+	}
+
+	bindTo := fmt.Sprintf(":%v", *metricsPort)
+	go http.ListenAndServe(bindTo, nil)
 
 	for range time.Tick(time.Minute) {
 		if _, err = r.processBuckets(); err != nil {
