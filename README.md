@@ -36,4 +36,4 @@ expvarmon -ports="33333,44444,55555" -vars="counts.totalProccesed,counts.workerE
 - [ ] Mongo tests
 - [ ] Stress testing
 - [ ] More tests to Redis worker
-- [ ] try many goros pulling from the same consume
+- [ ] try many goros pulling from the same consumer
