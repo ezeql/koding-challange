@@ -24,3 +24,8 @@ curl -H "Host: 127.0.0.1:15672" -H "Content-Type: application/json" -H "Authoriz
 
 Requires PostgreSQL >= 9.5 due [ON CONFLICT aka UPSERT](www.postgresql.org/docs/9.5/static/sql-insert.html#SQL-ON-CONFLICT) use.
 
+Metrics:
+
+https://github.com/divan/expvarmon
+
+expvarmon -ports="33333,44444,55555" -vars="mem:memstats.Alloc,duration:Response.Mean,hitsPerSecond"
