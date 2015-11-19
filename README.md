@@ -26,6 +26,8 @@ Requires PostgreSQL >= 9.5 due [ON CONFLICT aka UPSERT](www.postgresql.org/docs/
 
 Metrics:
 
-https://github.com/divan/expvarmon
+Pull them using [expvarmon](https://github.com/divan/expvarmon)
 
-```expvarmon -ports="33333,44444,55555" -vars="counts.totalProccesed,counts.workerErrors,hitsPerSecond" -i=5s```
+```
+expvarmon -ports="33333,44444,55555" -vars="counts.totalProccesed,counts.workerErrors,hitsPerSecond" -i=5s
+```
