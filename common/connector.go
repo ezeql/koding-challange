@@ -3,15 +3,14 @@ package common
 import (
 	"expvar"
 	"fmt"
-	"github.com/paulbellamy/ratecounter"
+	"github.com/ezeql/ratecounter"
 	"github.com/streadway/amqp"
 	"time"
 )
 
 var (
 	counts        = expvar.NewMap("rabbitmq_counters")
-	hitspersecond = expvar.NewInt("hits_per_second")
-	counter       = ratecounter.NewRateCounter(1 * time.Second)
+	hitsPerSecond = ratecounter.NewRateCounter(1 * time.Second)
 )
 
 type RabbitMQConnector struct {
@@ -97,8 +96,7 @@ func (m *RabbitMQConnector) Handle(tag string, f func([]byte) bool) error {
 
 func handle(deliveries <-chan amqp.Delivery, f func([]byte) bool, done chan error) {
 	for d := range deliveries {
-		counter.Incr(1)
-		hitspersecond.Set(counter.Rate())
+		hitsPerSecond.Incr(1)
 		requeue := !f(d.Body)
 		if requeue {
 			Log("error processing an element: requeueing")
@@ -110,15 +108,19 @@ func handle(deliveries <-chan amqp.Delivery, f func([]byte) bool, done chan erro
 	done <- nil
 }
 
-func (c *RabbitMQConnector) Close() error {
+func (m *RabbitMQConnector) Close() error {
 	// will close() the deliveries channel
-	if err := c.channel.Cancel(c.tag, true); err != nil {
+	if err := m.channel.Cancel(m.tag, true); err != nil {
 		return fmt.Errorf("Consumer cancel failed: %s", err)
 	}
-	if err := c.conn.Close(); err != nil {
+	if err := m.conn.Close(); err != nil {
 		return fmt.Errorf("AMQP connection close error: %s", err)
 	}
 	defer Info("AMQP shutdown OK")
 	// wait for handle() to exit
-	return <-c.done
+	return <-m.done
+}
+
+func init() {
+	expvar.Publish("hitsPerSecond", hitsPerSecond)
 }
