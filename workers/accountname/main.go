@@ -82,16 +82,21 @@ func openDB(host string, port int, user string, password string, dbName string) 
 func (db *DB) createTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS users_first_play (
 				"username" 	varchar(30) PRIMARY KEY,
-				"first_on" 	timestamp with time zone NOT NULL);`
+				"first_on" 	timestamp(0) with time zone NOT NULL);`
 	_, err := db.Exec(schema)
 	return err
 }
 
-//ON CONFLICT (upsert) was introduced in pgsql 9.5
+//insertEntry will insert a metric or update to the earliest given time
 func (db *DB) insertEntry(username string, t time.Time) error {
-	sql := `INSERT INTO users_first_play(username,first_on) 
-			VALUES ( $1, $2 ) 
-			ON CONFLICT(username) DO NOTHING;`
+	sql := `INSERT into users_first_play as U (username,first_on)  
+			VALUES ( $1, $2 ) ON CONFLICT(username) DO UPDATE 
+			SET first_on = EXCLUDED.first_on 
+			WHERE U.first_on > EXCLUDED.first_on;`
+
+	//ON CONFLICT (upsert) was introduced in pgsql 9.5
+	//http://www.postgresql.org/docs/9.5/static/sql-insert.html#SQL-ON-CONFLICT
+
 	_, err := db.Exec(sql, username, t)
 	return err
 }
