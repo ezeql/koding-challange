@@ -41,18 +41,28 @@ type Redis struct {
 func main() {
 	flag.Parse()
 	common.DebugLevel = *debugMode
+	common.Info("disctinct name Worker")
+	common.Info(`collects daily occurrences of distinct events in Redis. 
+				Metrics that are older than 30 days are merged into a monthly bucket, 
+				then cleared.`)
+
+	common.Info("connecting to Redis...")
 
 	r, err := OpenRedis(*redisHost, *redisPort)
 	if err != nil {
 		log.Fatalln("Cannot dial redis", err)
 	}
 	defer r.Close()
+	common.Info("Connected")
+	common.Info("connecting to RabbitMQ...")
 
 	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}
 	defer connector.Close()
+	common.Info("connected")
+	common.Info("Starting worker proccesor")
 
 	connector.Handle("distinct-name", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
@@ -66,10 +76,12 @@ func main() {
 	if err != nil {
 		log.Fatalln("error connecting to Rabbit", err)
 	}
+	common.Info("Starting a metrics http server")
 
 	bindTo := fmt.Sprintf(":%v", *metricsPort)
 	go http.ListenAndServe(bindTo, nil)
 
+	common.Info("Starting old buckets ticker")
 	for range time.Tick(time.Minute) {
 		if _, err = r.processBuckets(); err != nil {
 			panic(err)

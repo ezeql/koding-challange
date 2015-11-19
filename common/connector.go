@@ -40,10 +40,10 @@ func BuildRabbitMQConnector(host string, port int, user string, password string,
 	}
 
 	go func() {
-		Info("rabbitmq connection closed: ", <-mq.conn.NotifyClose(make(chan *amqp.Error)))
+		Info("RabbitMQ connection closed: ", <-mq.conn.NotifyClose(make(chan *amqp.Error)))
 		ticker := time.NewTicker(time.Second * 5)
 		for range ticker.C {
-			Log("trying to recover connection to rabbitmq")
+			Log("trying to recover connection to RabbitMQ")
 			if e := mq.open(); e != nil {
 				Log("cannot connect to RabbitMQ at:", mq.url)
 				continue
@@ -68,17 +68,15 @@ func (m *RabbitMQConnector) Close() error {
 	// 	return fmt.Errorf("Consumer cancel failed: %s", err)
 	// }
 	if err := m.conn.Close(); err != nil {
-		return fmt.Errorf("AMQP connection close error: %s", err)
+		return fmt.Errorf("RabbitMQ connection close error: %s", err)
 	}
-	defer Info("AMQP shutdown OK")
+	defer Info("RabbitMQ shutdown OK")
 	// wait for handle() to exit
 	return <-m.done
 }
 
 func (m *RabbitMQConnector) open() error {
 	var err error
-
-	Log("connecting to RabbitMQ")
 	if m.conn, err = amqp.Dial(m.url); err != nil {
 		return fmt.Errorf("Dial: %v", err)
 	}

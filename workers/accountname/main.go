@@ -33,6 +33,10 @@ type DB struct {
 func main() {
 	flag.Parse()
 	common.DebugLevel = *debugMode
+	common.Info("AccountName Worker")
+	common.Info(`collects all the account names that sent metrics, with their 
+				first occurrence datetime (UTC) into PostgreSQL.`)
+	common.Info("connecting to PostgreSQL...")
 
 	db, err := openDB(*postgreSQLHost, *postgreSQLPort, *postgreSQLUser, *postgreSQLPassword, *postgreSQLDB)
 	if err != nil {
@@ -40,16 +44,21 @@ func main() {
 	}
 	defer db.Close()
 
+	common.Info("Connected")
+
 	if err := db.createTable(); err != nil {
 		log.Fatalln("table:", err)
 	}
 
+	common.Info("connecting to RabbitMQ...")
 	c, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}
+	common.Info("connected")
 	defer c.Close()
 
+	common.Info("Starting worker proccesor")
 	err = c.Handle("account-name", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
 		if err := db.insertEntry(d.Username, *d.Time); err != nil {
@@ -61,6 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatalln("error connecting to Rabbit", err)
 	}
+
+	common.Info("Starting a metrics http server")
 
 	bindTo := fmt.Sprintf(":%v", *metricsPort)
 	http.ListenAndServe(bindTo, nil)

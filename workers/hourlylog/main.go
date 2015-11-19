@@ -35,18 +35,26 @@ var index = mgo.Index{
 func main() {
 	flag.Parse()
 	common.DebugLevel = true
+	common.Info("AccountName Worker")
+	common.Info("collects all items that occurred in the last hour into MongoDB")
+	common.Info("connecting to Mongo...")
 
 	mongo, err := OpenMongo(*mongoDBHost, *mongoDBPort)
 	if err != nil {
 		log.Fatalln("Error on Mongo:", err)
 	}
 	defer mongo.Close()
+	common.Info("Connected")
+	common.Info("connecting to RabbitMQ...")
 
 	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}
 	defer connector.Close()
+
+	common.Info("connected")
+	common.Info("Starting worker proccesor")
 
 	err = connector.Handle("hourly-log", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
@@ -60,6 +68,8 @@ func main() {
 	if err != nil {
 		log.Fatalln("error connecting to Rabbit", err)
 	}
+
+	common.Info("Starting a metrics http server")
 
 	bindTo := fmt.Sprintf(":%v", *metricsPort)
 	http.ListenAndServe(bindTo, nil)
