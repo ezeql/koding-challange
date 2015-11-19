@@ -16,6 +16,7 @@ var (
 	rabbitPort         = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser         = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword     = flag.String("rabbit-password", "guest", "RabbitMQ password")
+	rabbitExchange     = flag.String("rabbit-exchange", "logs", "RabbitMQ exchange name")
 	postgreSQLHost     = flag.String("postgresql-host", "127.0.0.1", "PostgreSQL host")
 	postgreSQLPort     = flag.Int("postgresql-port", 5432, "PostgreSQL port")
 	postgreSQLUser     = flag.String("postgresql-user", "postgres", "PostgreSQL username")
@@ -43,7 +44,7 @@ func main() {
 		log.Fatalln("table:", err)
 	}
 
-	c, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword)
+	c, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}

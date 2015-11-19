@@ -16,6 +16,7 @@ var (
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
+	rabbitExchange = flag.String("rabbit-exchange", "logs", "RabbitMQ exchange name")
 	redisHost      = flag.String("redis-host", "127.0.0.1", "redis host")
 	redisPort      = flag.Int("redis-port", 6379, "redis port")
 	debugMode      = flag.Bool("loglevel", false, "debug mode")
@@ -47,7 +48,7 @@ func main() {
 	}
 	defer r.Close()
 
-	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword)
+	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}

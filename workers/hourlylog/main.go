@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	rabbitHost     = flag.String("rabbit-host", "192.168.99.100", "RabbitMQ host")
+	rabbitHost     = flag.String("rabbit-host", "127.0.0.1", "RabbitMQ host")
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
-	mongoDBHost    = flag.String("mongodb-host", "192.168.99.100", "MongoDB host")
+	rabbitExchange = flag.String("rabbit-exchange", "logs", "RabbitMQ exchange name")
+	mongoDBHost    = flag.String("mongodb-host", "127.0.0.1", "MongoDB host")
 	mongoDBPort    = flag.Int("mongodb-port", 27017, "MongoDB port")
 	debugMode      = flag.Bool("loglevel", false, "debug mode")
 	metricsPort    = flag.Int("metrics-port", 55555, "expvar stats port")
@@ -35,7 +36,7 @@ func main() {
 	}
 	defer mongo.Close()
 
-	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword)
+	connector, err := common.BuildRabbitMQConnector(*rabbitHost, *rabbitPort, *rabbitUser, *rabbitPassword, *rabbitExchange)
 	if err != nil {
 		log.Fatalln("cannot connect to rabbitmq", err)
 	}
