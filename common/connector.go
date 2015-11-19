@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	counts        = expvar.NewMap("rabbitmq_counters")
+	counts        = expvar.NewMap("counts")
 	hitsPerSecond = ratecounter.NewRateCounter(1 * time.Second)
 )
 
@@ -23,12 +23,9 @@ type ProcesorFunc func([]byte) bool
 type RabbitMQConnector struct {
 	conn     *amqp.Connection
 	channel  *amqp.Channel
-	tag      string
 	url      string
 	exchange string
-	queue    string
 	done     chan error
-	internal chan bool
 	handlers []consumerHandler
 }
 
@@ -124,10 +121,12 @@ func (m *RabbitMQConnector) consume(queueName string, f ProcesorFunc) error {
 func process(deliveries <-chan amqp.Delivery, f ProcesorFunc, done chan error) {
 	for d := range deliveries {
 		hitsPerSecond.Incr(1)
+		counts.Add("totalProccesed", 1)
+
 		requeue := !f(d.Body)
 		if requeue {
 			Log("error processing an element: requeueing")
-			counts.Add("worker_errors", 1)
+			counts.Add("workerErrors", 1)
 		}
 		d.Ack(requeue)
 	}
