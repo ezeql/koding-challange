@@ -63,7 +63,7 @@ func main() {
 		d := common.MustUnmarshallFromJSON(b)
 		if err := db.insertEntry(d.Username, *d.Time); err != nil {
 			log.Println("error inserting in pgsql", err)
-			return false
+			return false //requeue
 		}
 		return true
 	})

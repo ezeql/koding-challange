@@ -60,7 +60,7 @@ func main() {
 		d := common.MustUnmarshallFromJSON(b)
 		if err = mongo.InsertMetric(d); err != nil {
 			log.Println("error inserting in mongo", err)
-			return false
+			return false //requeue
 		}
 		return true
 	})

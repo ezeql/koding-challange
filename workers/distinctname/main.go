@@ -68,7 +68,7 @@ func main() {
 		d := common.MustUnmarshallFromJSON(b)
 		if _, err = r.processMetric(d); err != nil {
 			log.Println("error inserting in redis", err)
-			return false
+			return false //requeue
 		}
 		return true
 	})
@@ -101,13 +101,16 @@ func OpenRedis(host string, port int) (*Redis, error) {
 func (r *Redis) processMetric(m common.MetricEntry) (interface{}, error) {
 	s := begginingOfDayUnix(*m.Time)
 	r.Send("MULTI")
-	r.Send("ZINCRBY", s, 1, m.Metric)
+	r.Send("ZINCRBY", s, 1, m.Metric) //inc the occurrences of the metric
+	//adds metric's unix day number(begginingOfDayUnix) to the process queue.
 	r.Send("ZADD", processQueue, s, s)
 	return r.Do("EXEC")
 }
 
 func (r *Redis) processBuckets() (string, error) {
 	t := time.Now()
+	//get all elements which correpond to an older bucket.
+	//NOTE: currently supports just a single element
 	ids, err := redis.Values(r.Do("ZRANGEBYSCORE", "queue", "-inf", begginingOfBucketUnix(t)))
 	if err != nil {
 		return "", err
@@ -117,6 +120,7 @@ func (r *Redis) processBuckets() (string, error) {
 	right := begginingOfDayUnix(t) - 1 // [....) interval
 	left := right - secondsInBucket
 
+	//name the proccesed bucket
 	dest := bucketPrefix + strconv.FormatInt(begginingOfDayUnix(t), 10)
 
 	params := []interface{}{dest, strconv.Itoa(total)}
@@ -133,8 +137,11 @@ func (r *Redis) processBuckets() (string, error) {
 	// 	ids = append(ids, dest)
 	// }
 	r.Send("MULTI")
+	//sum all daily based occurences and save the result at 'dest'
 	r.Send("ZUNIONSTORE", args...)
+	//delete the day from the queue
 	r.Send("ZREMRANGEBYSCORE", "queue", left, right)
+	//delete all day-based occurences
 	r.Send("DEL", ids...)
 	_, err = r.Do("EXEC")
 	return dest, err
