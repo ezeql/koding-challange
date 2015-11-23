@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/ezeql/koding-test/common"
+	"github.com/ezeql/koding-challange/common"
 	"github.com/garyburd/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -29,7 +29,16 @@ func TestMain(m *testing.M) {
 func TestHalfMonthProcess(t *testing.T) {
 	var m common.MetricEntry
 
-	day := time.Now().Add(-time.Second * time.Duration(secondsInBucket)).UTC()
+	//initial time in seconds for current bucket
+	current := begginingOfBucketUnix(time.Now().UTC())
+
+	lastSecondPreviousBucket := time.Unix(current-1, 0)
+
+	//get unixtime start date for the previous finished bucket
+	prev := begginingOfBucketUnix(lastSecondPreviousBucket)
+
+	day := time.Unix(prev, 0)
+
 	for i := 0; i < int(bucketLength); i++ {
 		m = common.MetricEntry{"John", 1, "call-api-x", &day}
 		r.processMetric(m)
@@ -43,6 +52,7 @@ func TestHalfMonthProcess(t *testing.T) {
 
 	assert.Nil(t, err, "must be nil")
 	assert.Equal(t, len(resultMap), 2, "must be ...")
-	assert.EqualValues(t, resultMap["call-api-x"], bucketLength/2, "must be ...")
-	assert.EqualValues(t, resultMap["login"], bucketLength/2, "must be ...")
+	assert.EqualValues(t, resultMap["call-api-x"], bucketLength, "must be ...")
+	assert.EqualValues(t, resultMap["login"], bucketLength, "must be ...")
+
 }
