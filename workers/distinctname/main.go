@@ -84,7 +84,7 @@ func main() {
 	common.Info("Starting old buckets ticker")
 	for range time.Tick(time.Minute) {
 		if _, err = r.processBuckets(); err != nil {
-			panic(err)
+			log.Println("error proccesing buckets:", err)
 		}
 	}
 }
@@ -101,8 +101,13 @@ func OpenRedis(host string, port int) (*Redis, error) {
 func (r *Redis) processMetric(m common.MetricEntry) (interface{}, error) {
 	s := begginingOfDayUnix(*m.Time)
 	r.Send("MULTI")
-	r.Send("ZINCRBY", s, 1, m.Metric) //inc the occurrences of the metric
-	//adds metric's unix day number(begginingOfDayUnix) to the process queue.
+	//increments the occurrences for the given metric
+	r.Send("ZINCRBY", s, 1, m.Metric)
+	//adds metrics unix day number(begginingOfDayUnix) to the process queue.
+	//example: if metric occured at 18th nov 9pm UTC (1447095600)
+	// it will add the day identified by begginingOfDayUnix(m.Time)
+	//to the process queue
+
 	r.Send("ZADD", processQueue, s, s)
 	return r.Do("EXEC")
 }
@@ -117,17 +122,15 @@ func (r *Redis) processBuckets() (string, error) {
 	}
 	total := len(ids)
 
-	right := begginingOfDayUnix(t) - 1 // [....) interval
-	left := right - secondsInBucket
+	if total == 0 { //nothing to process
+		return "", nil
+	}
 
 	//name the proccesed bucket
 	dest := bucketPrefix + strconv.FormatInt(begginingOfDayUnix(t), 10)
 
-	params := []interface{}{dest, strconv.Itoa(total)}
-	args := append(params, ids...)
-
-	// //check if similar ids has been proccesed
-	// //if there is a previously computed set, add to the to arguments
+	// //check if similar ids have been proccesed
+	// //if there is a previously computed set, add to the arguments
 	// exists, err := redis.Bool(r.Do("EXISTS", dest))
 	// if err != nil {
 	// 	return nil, err
@@ -136,17 +139,28 @@ func (r *Redis) processBuckets() (string, error) {
 	// 	total++
 	// 	ids = append(ids, dest)
 	// }
+
 	r.Send("MULTI")
-	//sum all daily based occurences and save the result at 'dest'
+
+	params := []interface{}{dest, strconv.Itoa(total)}
+	args := append(params, ids...)
+
+	//sum all daily based occurences (loaded form the queue set) and save the result at 'dest'
 	r.Send("ZUNIONSTORE", args...)
-	//delete the day from the queue
+
+	right := begginingOfDayUnix(t) - 1 // [....) interval
+	left := right - secondsInBucket
+
+	//delete all the days corresponding to the bucket from the processing queue
 	r.Send("ZREMRANGEBYSCORE", "queue", left, right)
-	//delete all day-based occurences
+
+	//delete all day-based keys
 	r.Send("DEL", ids...)
 	_, err = r.Do("EXEC")
 	return dest, err
 }
 
+//begginingOfDayUnix returns beggining of day(as unix time) for the given time.Time
 func begginingOfDayUnix(t time.Time) int64 {
 	tu := t.UTC().Unix()
 	return tu - tu%secondsInDay
