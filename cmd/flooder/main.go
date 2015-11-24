@@ -18,7 +18,7 @@ func main() {
 	log.Println("Flooding with metrics... =D")
 
 	client := &http.Client{}
-	dest := fmt.Sprintf("%s/metric", *url)
+	dest := fmt.Sprintf("%s/metrics", *url)
 
 	m := map[string]interface{}{
 		"username": "kodingbot",

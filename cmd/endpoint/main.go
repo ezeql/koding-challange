@@ -44,7 +44,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.POST("/metric", service.createMetric)
+	r.POST("/metrics", service.createMetric)
 	r.GET("/debug/vars", expvar.Handler())
 
 	if err := r.Run(bindTo); err != nil {
