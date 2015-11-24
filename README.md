@@ -15,12 +15,11 @@ Tested using these docker images:
 
 ##Details
 
-The [rabbitmq-management](https://www.rabbitmq.com/management.html) plugin provides an HTTP-based API for publishing messages among many other things.
+~~The [rabbitmq-management](https://www.rabbitmq.com/management.html) plugin provides an HTTP-based API for publishing messages among many other things.~~
+An HTTP endpoint was introduced. 
 
-Example
-```
-curl -H "Host: 127.0.0.1:15672" -H "Content-Type: application/json" -H "Authorization: Basic Z3Vlc3Q6Z3Vlc3Q=" --data-binary '{"properties":{},"routing_key":"","payload":"{ \"username\": \"kodingbot\", \"count\": 255,  \"metric\": \"kite_call\" }","payload_encoding":"string"}' --compressed http://127.0.0.1:15672/api/exchanges/%2f/logs/publish
-```
+[Flooder](https://github.com/ezeql/koding-challange/blob/master/cmd/flooder/main.go) can be used to test it.
+
 
 Requires PostgreSQL >= 9.5 due [ON CONFLICT aka UPSERT](www.postgresql.org/docs/9.5/static/sql-insert.html#SQL-ON-CONFLICT) use.
 
