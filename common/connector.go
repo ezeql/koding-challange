@@ -62,6 +62,23 @@ func (m *RabbitMQConnector) Handle(queueName string, f ProcesorFunc) error {
 	return nil
 }
 
+func (m *RabbitMQConnector) Publish(b []byte) error {
+
+	return m.channel.Publish(
+		m.exchange, // publish to an exchange
+		"",         // routing to 0 or more queues
+		false,      // mandatory
+		false,      // immediate
+		amqp.Publishing{
+			Headers:         amqp.Table{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			Body:            b,
+			DeliveryMode:    amqp.Persistent, // 1=non-persistent, 2=persistent
+			Priority:        0,               // 0-9
+		})
+}
+
 func (m *RabbitMQConnector) Close() error {
 	// will close() the deliveries channel
 	// if err := m.channel.Cancel(m.tag, true); err != nil {
