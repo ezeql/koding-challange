@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	rabbitHost     = flag.String("rabbit-host", "192.168.99.100", "RabbitMQ host")
+	rabbitHost     = flag.String("rabbit-host", "127.0.0.1", "RabbitMQ host")
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
