@@ -4,6 +4,7 @@ import (
 	"log"
 )
 
+//DebugLevel set to true will output extra information out workers flow.
 var DebugLevel bool
 
 func Info(args ...interface{}) {
