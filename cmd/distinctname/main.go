@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	rabbitHost     = flag.String("rabbit-host", "127.0.0.1", "RabbitMQ host")
+	rabbitHost     = flag.String("rabbit-host", "192.168.99.100", "RabbitMQ host")
 	rabbitPort     = flag.Int("rabbit-port", 5672, "RabbitMQ port")
 	rabbitUser     = flag.String("rabbit-user", "guest", "RabbitMQ username")
 	rabbitPassword = flag.String("rabbit-password", "guest", "RabbitMQ password")
 	rabbitExchange = flag.String("rabbit-exchange", "logs", "RabbitMQ exchange name")
-	redisHost      = flag.String("redis-host", "127.0.0.1", "redis host")
+	redisHost      = flag.String("redis-host", "192.168.99.100", "redis host")
 	redisPort      = flag.Int("redis-port", 6379, "redis port")
 	debugMode      = flag.Bool("loglevel", false, "debug mode")
 	metricsPort    = flag.Int("metrics-port", 44444, "expvar stats port")
@@ -34,8 +34,8 @@ const (
 	bucketPrefix = "m_"
 )
 
-type Redis struct {
-	redis.Conn
+type redisPool struct {
+	*redis.Pool
 }
 
 func main() {
@@ -89,34 +89,50 @@ func main() {
 	}
 }
 
-func OpenRedis(host string, port int) (*Redis, error) {
-	c, err := redis.Dial("tcp", fmt.Sprintf("%s:%v", host, port))
-	if err != nil {
-		return nil, err
+func OpenRedis(host string, port int) (*redisPool, error) {
+	c := &redis.Pool{
+		MaxIdle:     5,
+		MaxActive:   30,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", fmt.Sprintf("%s:%v", host, port))
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
 	}
-	r := &Redis{c}
+
+	r := &redisPool{c}
 	return r, nil
 }
 
-func (r *Redis) processMetric(m common.MetricEntry) (interface{}, error) {
+func (r *redisPool) processMetric(m common.MetricEntry) (interface{}, error) {
+	c := r.Get()
+	defer c.Close()
+
 	s := begginingOfDayUnix(m.Time)
-	r.Send("MULTI")
+	c.Send("MULTI")
+
 	//increments the occurrences for the given metric
-	r.Send("ZINCRBY", s, 1, m.Metric)
+	c.Send("ZINCRBY", s, 1, m.Metric)
 	//adds metrics unix day number(begginingOfDayUnix) to the process queue.
 	//example: if metric occured at 18th nov 9pm UTC (1447095600)
 	// it will add the day identified by begginingOfDayUnix(m.Time)
 	//to the process queue
 
-	r.Send("ZADD", processQueue, s, s)
-	return r.Do("EXEC")
+	c.Send("ZADD", processQueue, s, s)
+	return c.Do("EXEC")
 }
 
-func (r *Redis) processBuckets() (string, error) {
+func (r *redisPool) processBuckets() (string, error) {
+	c := r.Get()
+	defer c.Close()
+
 	t := time.Now()
 	//get all elements which correpond to an older bucket.
 	//NOTE: currently supports just a single element
-	ids, err := redis.Values(r.Do("ZRANGEBYSCORE", "queue", "-inf", begginingOfBucketUnix(t)))
+	ids, err := redis.Values(c.Do("ZRANGEBYSCORE", "queue", "-inf", begginingOfBucketUnix(t)))
 	if err != nil {
 		return "", err
 	}
@@ -140,23 +156,23 @@ func (r *Redis) processBuckets() (string, error) {
 	// 	ids = append(ids, dest)
 	// }
 
-	r.Send("MULTI")
+	c.Send("MULTI")
 
 	params := []interface{}{dest, strconv.Itoa(total)}
 	args := append(params, ids...)
 
 	//sum all daily based occurences (loaded form the queue set) and save the result at 'dest'
-	r.Send("ZUNIONSTORE", args...)
+	c.Send("ZUNIONSTORE", args...)
 
 	right := begginingOfDayUnix(t) - 1 // [....) interval
 	left := right - secondsInBucket
 
 	//delete all the days corresponding to the bucket from the processing queue
-	r.Send("ZREMRANGEBYSCORE", "queue", left, right)
+	c.Send("ZREMRANGEBYSCORE", "queue", left, right)
 
 	//delete all day-based keys
-	r.Send("DEL", ids...)
-	_, err = r.Do("EXEC")
+	c.Send("DEL", ids...)
+	_, err = c.Do("EXEC")
 	return dest, err
 }
 

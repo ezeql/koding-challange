@@ -26,7 +26,7 @@ var (
 	metricsPort        = flag.Int("metrics-port", 33333, "expvar stats port")
 )
 
-type DB struct {
+type pgdb struct {
 	*sql.DB
 }
 
@@ -77,7 +77,7 @@ func main() {
 	http.ListenAndServe(bindTo, nil)
 }
 
-func openDB(host string, port int, user string, password string, dbName string) (*DB, error) {
+func openDB(host string, port int, user string, password string, dbName string) (*pgdb, error) {
 	dbinfo := fmt.Sprintf("host=%s port=%v user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbName)
 
@@ -88,11 +88,11 @@ func openDB(host string, port int, user string, password string, dbName string) 
 	if err = conn.Ping(); err != nil {
 		return nil, err
 	}
-	db := &DB{conn}
+	db := &pgdb{conn}
 	return db, nil
 }
 
-func (db *DB) createTable() error {
+func (db *pgdb) createTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS users_first_play (
 				"username" 	varchar(30) PRIMARY KEY,
 				"first_on" 	timestamp(0) with time zone NOT NULL);`
@@ -101,7 +101,7 @@ func (db *DB) createTable() error {
 }
 
 //insertEntry will insert a metric or update to the earliest given time
-func (db *DB) insertEntry(username string, t time.Time) error {
+func (db *pgdb) insertEntry(username string, t time.Time) error {
 	sql := `INSERT into users_first_play as U (username,first_on)  
 			VALUES ( $1, $2 ) ON CONFLICT(username) DO UPDATE 
 			SET first_on = EXCLUDED.first_on 

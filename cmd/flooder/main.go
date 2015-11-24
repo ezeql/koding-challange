@@ -18,10 +18,8 @@ func main() {
 			"count":    1,
 			"metric":   "kite_call",
 		}
-		json, err := json.Marshal(m)
-		if err != nil {
-			log.Fatalln(err)
-		}
+		json, _ := json.Marshal(m)
+
 		contentReader := bytes.NewReader(json)
 
 		req, _ := http.NewRequest("POST", "http://127.0.0.1:8080/metric", contentReader)

@@ -22,7 +22,7 @@ var (
 	metricsPort    = flag.Int("metrics-port", 55555, "expvar stats port")
 )
 
-type Mongo struct {
+type mongo struct {
 	*mgo.Session
 }
 
@@ -34,16 +34,16 @@ var index = mgo.Index{
 
 func main() {
 	flag.Parse()
-	common.DebugLevel = true
+	common.DebugLevel = *debugMode
 	common.Info("AccountName Worker")
 	common.Info("collects all items that occurred in the last hour into MongoDB")
 	common.Info("connecting to Mongo...")
 
-	mongo, err := OpenMongo(*mongoDBHost, *mongoDBPort)
+	m, err := OpenMongo(*mongoDBHost, *mongoDBPort)
 	if err != nil {
 		log.Fatalln("Error on Mongo:", err)
 	}
-	defer mongo.Close()
+	defer m.Close()
 	common.Info("Connected")
 	common.Info("connecting to RabbitMQ...")
 
@@ -58,7 +58,7 @@ func main() {
 
 	err = connector.Handle("hourly-log", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
-		if err = mongo.InsertMetric(d); err != nil {
+		if err = m.InsertMetric(d); err != nil {
 			log.Println("error inserting in mongo", err)
 			return false //requeue
 		}
@@ -75,16 +75,16 @@ func main() {
 	http.ListenAndServe(bindTo, nil)
 }
 
-func OpenMongo(host string, port int) (*Mongo, error) {
+func OpenMongo(host string, port int) (*mongo, error) {
 	session, err := mgo.Dial(fmt.Sprintf("%s:%v", host, port))
 	if err != nil {
 		return nil, err
 	}
-	m := &Mongo{session}
+	m := &mongo{session}
 	return m, nil
 }
 
-func (m *Mongo) InsertMetric(d common.MetricEntry) error {
+func (m *mongo) InsertMetric(d common.MetricEntry) error {
 	c := m.DB("koding").C("entries")
 	if err := c.EnsureIndex(index); err != nil {
 		return err
