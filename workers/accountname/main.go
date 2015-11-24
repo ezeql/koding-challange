@@ -61,7 +61,7 @@ func main() {
 	common.Info("Starting worker proccesor")
 	err = c.Handle("account-name", func(b []byte) bool {
 		d := common.MustUnmarshallFromJSON(b)
-		if err := db.insertEntry(d.Username, *d.Time); err != nil {
+		if err := db.insertEntry(d.Username, d.Time); err != nil {
 			log.Println("error inserting in pgsql", err)
 			return false //requeue
 		}

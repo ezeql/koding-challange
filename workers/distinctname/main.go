@@ -99,7 +99,7 @@ func OpenRedis(host string, port int) (*Redis, error) {
 }
 
 func (r *Redis) processMetric(m common.MetricEntry) (interface{}, error) {
-	s := begginingOfDayUnix(*m.Time)
+	s := begginingOfDayUnix(m.Time)
 	r.Send("MULTI")
 	//increments the occurrences for the given metric
 	r.Send("ZINCRBY", s, 1, m.Metric)
