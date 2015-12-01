@@ -1,5 +1,4 @@
-# koding-challange
-A challange project for Koding
+# koding-challenge
 
 [![Code Climate](https://codeclimate.com/github/ezeql/koding-challange/badges/gpa.svg)](https://codeclimate.com/github/ezeql/koding-challange)
 
